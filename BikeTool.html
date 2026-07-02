@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚙️ BikeTool – 10‑Phase Mechanical Booking</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0d0f12;
+      --surface: #1a1d23;
+      --text: #e0e0e0;
+      --accent: #ff6a00;
+      --accent-glow: #ff9100;
+      --neon-green: #39ff14;
+      --danger: #e63946;
+      --success: #2ecc71;
+      --gear-bg: #1e2229;
+      --border: #2a2e36;
+      --tooth-color: #4a4f5a;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .biketool-app {
+      display: flex;
+      min-height: 100vh;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ----- LEFT GEAR PANEL ----- */
+    .gear-animation-container {
+      width: 280px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 3rem 1rem 2rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .master-gear-wrapper {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin: 2rem 0;
+    }
+
+    .master-gear {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0; height: 0;
+      transform-origin: 0 0;
+      transition: transform 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+
+    .tooth {
+      position: absolute;
+      width: 18px;
+      height: 8px;
+      background: var(--tooth-color);
+      border-radius: 2px;
+      transform-origin: center center;
+      top: -4px; /* center vertically */
+      left: -9px; /* center horizontally */
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .tooth.active {
+      background: var(--neon-green);
+      box-shadow: 0 0 12px var(--neon-green), 0 0 25px var(--neon-green);
+    }
+
+    .gear-center {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 30px; height: 30px;
+      background: var(--accent);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px var(--accent);
+      z-index: 2;
+    }
+
+    .lock-indicator {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      color: var(--accent);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .phase-counter {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: var(--accent);
+      margin-top: 1.5rem;
+      text-align: center;
+      background: #1e2229;
+      padding: 0.5rem 1.5rem;
+      border-radius: 20px;
+    }
+
+    .phase-counter span { font-size: 2rem; }
+
+    /* ----- RIGHT BOOKING WIZARD ----- */
+    .booking-wizard {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .phase-step {
+      display: none;
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 2rem;
+      border: 1px solid var(--border);
+      min-height: 400px;
+    }
+
+    .phase-step.active {
+      display: block;
+    }
+
+    h2 {
+      margin-bottom: 1.5rem;
+      color: var(--accent);
+      font-size: 1.6rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--gear-bg);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-weight: 600;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(255,106,0,0.3);
+    }
+
+    .card.selected {
+      border-color: var(--accent);
+      background: #2a1e12;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .toggle-group, .slider-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .toggle-option {
+      background: var(--gear-bg);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem 1.2rem;
+      cursor: pointer;
+      transition: 0.15s;
+      font-weight: 500;
+    }
+
+    .toggle-option.selected {
+      border-color: var(--neon-green);
+      background: #1a2e1a;
+      box-shadow: 0 0 10px var(--neon-green);
+    }
+
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .invoice-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+    }
+
+    .invoice-table th, .invoice-table td {
+      padding: 0.7rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .invoice-total {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .navigation-cluster {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.8rem 2rem;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover { background: #e55d00; }
+    button:disabled { background: #444; cursor: not-allowed; }
+
+    .success-animation {
+      text-align: center;
+      font-size: 5rem;
+      color: var(--success);
+      animation: pop 0.6s ease;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); opacity: 0; }
+      80% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .gear-lock {
+      animation: lockRotate 0.8s ease-out forwards;
+    }
+
+    @keyframes lockRotate {
+      0% { transform: rotate(0deg); }
+      70% { transform: rotate(360deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 800px) {
+      .biketool-app { flex-direction: column; }
+      .gear-animation-container {
+        width: 100%;
+        height: auto;
+        position: static;
+        flex-direction: row;
+        justify-content: center;
+        padding: 1rem;
+      }
+      .master-gear-wrapper { margin: 0; }
+      .booking-wizard { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="biketool-app">
+    <!-- LEFT: MECHANICAL GEAR ANIMATION -->
+    <div class="gear-animation-container">
+      <h3 style="color:var(--accent);">⚙️ BIKE<strong>TOOL</strong></h3>
+      <div class="master-gear-wrapper">
+        <div class="lock-indicator">🔒</div>
+        <div class="master-gear" id="gearIndicator">
+          <!-- 10 teeth positioned by JS -->
+        </div>
+        <div class="gear-center"></div>
+      </div>
+      <div class="phase-counter">PHASE <span id="currentPhaseNum">1</span>/10</div>
+    </div>
+
+    <!-- RIGHT: BOOKING WIZARD -->
+    <main class="booking-wizard">
+      <form id="bookingForm" onsubmit="event.preventDefault();">
+        <!-- PHASE 1 -->
+        <section class="phase-step active" id="phase-1">
+          <h2>Phase 1: Select Bike Segment</h2>
+          <div class="card-grid">
+            <div class="card" onclick="selectOption('bikeSegment', 'sports', this)">🏍️ Sports</div>
+            <div class="card" onclick="selectOption('bikeSegment', 'cruiser', this)">🛵 Cruiser</div>
+            <div class="card" onclick="selectOption('bikeSegment', 'commuter', this)">🏍️ Commuter</div>
+            <div class="card" onclick="selectOption('bikeSegment', 'dirt', this)">🏁 Dirt</div>
+          </div>
+        </section>
+
+        <!-- PHASE 2 -->
+        <section class="phase-step" id="phase-2">
+          <h2>Phase 2: System Category</h2>
+          <div class="card-grid">
+            <div class="card" onclick="selectOption('systemCategory', 'engine', this)">🔧 Engine Parts</div>
+            <div class="card" onclick="selectOption('systemCategory', 'powertrain', this)">⚙️ Powertrain/Gears</div>
+            <div class="card" onclick="selectOption('systemCategory', 'braking', this)">🛑 Braking</div>
+            <div class="card" onclick="selectOption('systemCategory', 'electrical', this)">⚡ Electrical</div>
+            <div class="card" onclick="selectOption('systemCategory', 'suspension', this)">🛞 Suspension</div>
+          </div>
+        </section>
+
+        <!-- PHASE 3 -->
+        <section class="phase-step" id="phase-3">
+          <h2>Phase 3: Part Selection</h2>
+          <div id="partGrid" class="card-grid"></div>
+        </section>
+
+        <!-- PHASE 4 -->
+        <section class="phase-step" id="phase-4">
+          <h2>Phase 4: Component Material</h2>
+          <div class="toggle-group">
+            <div class="toggle-option" onclick="selectOption('material', 'alloy', this)">Standard Alloy</div>
+            <div class="toggle-option" onclick="selectOption('material', 'forged', this)">Forged Steel</div>
+            <div class="toggle-option" onclick="selectOption('material', 'carbon', this)">Carbon Fibre</div>
+            <div class="toggle-option" onclick="selectOption('material', 'titanium', this)">Titanium Core</div>
+          </div>
+        </section>
+
+        <!-- PHASE 5 -->
+        <section class="phase-step" id="phase-5">
+          <h2>Phase 5: Performance Spec</h2>
+          <div class="toggle-group">
+            <div class="toggle-option" onclick="selectOption('tuning', 'stock', this)">Stock OEM</div>
+            <div class="toggle-option" onclick="selectOption('tuning', 'street', this)">Street-Sport</div>
+            <div class="toggle-option" onclick="selectOption('tuning', 'track', this)">Track-Race</div>
+          </div>
+        </section>
+
+        <!-- PHASE 6 -->
+        <section class="phase-step" id="phase-6">
+          <h2>Phase 6: Fitment Geometry</h2>
+          <div class="toggle-group">
+            <div class="toggle-option" onclick="selectOption('fitment', 'under150', this)">Under 150cc</div>
+            <div class="toggle-option" onclick="selectOption('fitment', '150-400', this)">150cc–400cc</div>
+            <div class="toggle-option" onclick="selectOption('fitment', '400-600', this)">400cc–600cc</div>
+            <div class="toggle-option" onclick="selectOption('fitment', '600plus', this)">600cc+ (Superbike)</div>
+          </div>
+        </section>
+
+        <!-- PHASE 7 -->
+        <section class="phase-step" id="phase-7">
+          <h2>Phase 7: Delivery Mode</h2>
+          <div class="toggle-group">
+            <div class="toggle-option" onclick="selectOption('delivery', 'ship', this)">📦 Doorstep Shipping</div>
+            <div class="toggle-option" onclick="selectOption('delivery', 'pickup', this)">🏬 Garage Pickup</div>
+          </div>
+        </section>
+
+        <!-- PHASE 8 -->
+        <section class="phase-step" id="phase-8">
+          <h2>Phase 8: Contact Sync</h2>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="custName" placeholder="Enter name" required>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="tel" id="custPhone" placeholder="10-digit number" required>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="custEmail" placeholder="example@mail.com" required>
+          </div>
+        </section>
+
+        <!-- PHASE 9 -->
+        <section class="phase-step" id="phase-9">
+          <h2>Phase 9: Real‑time Invoice</h2>
+          <div id="invoiceContainer"></div>
+        </section>
+
+        <!-- PHASE 10 -->
+        <section class="phase-step" id="phase-10">
+          <h2>Phase 10: Order Dispatched</h2>
+          <div class="success-animation">✔️</div>
+          <h3 style="text-align:center; margin-top:1rem;">Gear locked – Order confirmed</h3>
+          <p style="text-align:center;">Order ID: <strong id="orderIdDisplay"></strong></p>
+          <button type="button" onclick="resetBooking()" style="display:block; margin:2rem auto;">Start New Booking</button>
+        </section>
+
+        <!-- NAVIGATION -->
+        <div class="navigation-cluster">
+          <button type="button" id="prevBtn" onclick="movePhase(-1)" disabled>⬅ Previous</button>
+          <button type="button" id="nextBtn" onclick="movePhase(1)">Next Shift ➡</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <script>
+    // ========== DATA ==========
+    const partsDatabase = [
+      { name: 'Piston Kit', category: 'engine', basePrice: 1200 },
+      { name: 'Crankshaft', category: 'engine', basePrice: 3400 },
+      { name: 'Camshaft', category: 'engine', basePrice: 2100 },
+      { name: 'Chain Sprocket', category: 'powertrain', basePrice: 800 },
+      { name: 'Clutch Plates', category: 'powertrain', basePrice: 1450 },
+      { name: 'Shift Fork', category: 'powertrain', basePrice: 950 },
+      { name: 'Brake Pads', category: 'braking', basePrice: 600 },
+      { name: 'Disc Rotor', category: 'braking', basePrice: 1800 },
+      { name: 'Starter Motor', category: 'electrical', basePrice: 1300 },
+      { name: 'CDI Unit', category: 'electrical', basePrice: 1100 },
+      { name: 'Front Forks', category: 'suspension', basePrice: 2800 },
+      { name: 'Shock Absorber', category: 'suspension', basePrice: 1900 },
+    ];
+
+    const materialMultiplier = {
+      alloy: 0,
+      forged: 250,
+      carbon: 900,
+      titanium: 1500
+    };
+
+    const tuningSurcharge = {
+      stock: 0,
+      street: 600,
+      track: 1800
+    };
+
+    const taxRate = 0.18; // GST
+
+    // ========== STATE ==========
+    let currentPhase = 1;
+    let bookingData = {
+      bikeSegment: null,
+      systemCategory: null,
+      part: null,
+      material: null,
+      tuning: null,
+      fitment: null,
+      delivery: null,
+      contact: { name: '', phone: '', email: '' }
+    };
+
+    // Reload state from localStorage
+    if (localStorage.getItem('biketool_phase')) {
+      currentPhase = parseInt(localStorage.getItem('biketool_phase'));
+    }
+    if (localStorage.getItem('biketool_data')) {
+      bookingData = JSON.parse(localStorage.getItem('biketool_data'));
+    }
+
+    // ========== DOM ==========
+    const gear = document.getElementById('gearIndicator');
+    const phaseNumSpan = document.getElementById('currentPhaseNum');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    // Build gear teeth dynamically
+    function buildGearTeeth() {
+      const radius = 80;
+      for (let i = 0; i < 10; i++) {
+        const tooth = document.createElement('div');
+        tooth.className = 'tooth t' + (i+1);
+        tooth.style.transform = `rotate(${i * 36}deg) translateY(-${radius}px)`;
+        gear.appendChild(tooth);
+      }
+    }
+    buildGearTeeth();
+
+    // ========== SOUND ==========
+    function playClick() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 800;
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.08);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    // ========== GEAR ANIMATION ==========
+    function updateGear() {
+      const angle = (currentPhase - 1) * 36;
+      gear.style.transform = `rotate(${angle}deg)`;
+
+      // Highlight teeth 1..currentPhase
+      document.querySelectorAll('.tooth').forEach((tooth, idx) => {
+        if (idx < currentPhase) {
+          tooth.classList.add('active');
+        } else {
+          tooth.classList.remove('active');
+        }
+      });
+
+      phaseNumSpan.textContent = currentPhase;
+    }
+
+    // ========== PHASE NAVIGATION ==========
+    function movePhase(delta) {
+      const newPhase = currentPhase + delta;
+      if (newPhase < 1 || newPhase > 10) return;
+
+      // Validate current phase before moving forward
+      if (delta > 0 && !validatePhase(currentPhase)) {
+        alert('Please complete the current selection before proceeding.');
+        return;
+      }
+
+      // If moving from phase 9 to 10, finalize order
+      if (currentPhase === 9 && delta === 1) {
+        finalizeOrder();
+      }
+
+      // If phase 8 (contact), store data
+      if (currentPhase === 8 && delta === 1) {
+        bookingData.contact.name = document.getElementById('custName').value.trim();
+        bookingData.contact.phone = document.getElementById('custPhone').value.trim();
+        bookingData.contact.email = document.getElementById('custEmail').value.trim();
+      }
+
+      currentPhase = newPhase;
+      updatePhaseUI();
+      playClick();
+    }
+
+    function validatePhase(phase) {
+      switch (phase) {
+        case 1: return bookingData.bikeSegment !== null;
+        case 2: return bookingData.systemCategory !== null;
+        case 3: return bookingData.part !== null;
+        case 4: return bookingData.material !== null;
+        case 5: return bookingData.tuning !== null;
+        case 6: return bookingData.fitment !== null;
+        case 7: return bookingData.delivery !== null;
+        case 8:
+          const name = document.getElementById('custName').value.trim();
+          const phone = document.getElementById('custPhone').value.trim();
+          const email = document.getElementById('custEmail').value.trim();
+          const phoneRegex = /^[0-9]{10}$/;
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!name || !phoneRegex.test(phone) || !emailRegex.test(email)) {
+            alert('Please fill in valid Name, 10-digit Mobile, and Email.');
+            return false;
+          }
+          return true;
+        default: return true;
+      }
+    }
+
+    function updatePhaseUI() {
+      // Hide all phases
+      document.querySelectorAll('.phase-step').forEach(s => s.classList.remove('active'));
+      document.getElementById(`phase-${currentPhase}`).classList.add('active');
+
+      // Update gear
+      updateGear();
+
+      // Button states
+      prevBtn.disabled = (currentPhase === 1);
+      if (currentPhase === 10) {
+        nextBtn.style.display = 'none';
+        prevBtn.style.display = 'none';
+      } else {
+        nextBtn.style.display = 'inline-block';
+        prevBtn.style.display = 'inline-block';
+        nextBtn.textContent = currentPhase === 9 ? 'Confirm & Lock ⚙️' : 'Next Shift ➡';
+      }
+
+      // If phase 3, load part grid
+      if (currentPhase === 3) {
+        loadPartGrid();
+      }
+      if (currentPhase === 9) {
+        generateInvoice();
+      }
+      if (currentPhase === 10) {
+        // gear lock animation
+        gear.classList.add('gear-lock');
+      }
+
+      // Save state
+      localStorage.setItem('biketool_phase', currentPhase);
+      localStorage.setItem('biketool_data', JSON.stringify(bookingData));
+    }
+
+    // ========== OPTION SELECTION ==========
+    function selectOption(field, value, element) {
+      // Deselect siblings
+      element.parentElement.querySelectorAll('.card, .toggle-option').forEach(el => el.classList.remove('selected'));
+      element.classList.add('selected');
+      bookingData[field] = value;
+    }
+
+    // ========== PART GRID ==========
+    function loadPartGrid() {
+      const grid = document.getElementById('partGrid');
+      const filtered = partsDatabase.filter(p => p.category === bookingData.systemCategory);
+      grid.innerHTML = filtered.map(p => `
+        <div class="card ${bookingData.part?.name === p.name ? 'selected' : ''}"
+             onclick="selectPart('${p.name}', ${p.basePrice}, this)">
+          ${p.name} <br><small>₹${p.basePrice}</small>
+        </div>
+      `).join('');
+    }
+
+    function selectPart(name, price, element) {
+      document.querySelectorAll('#partGrid .card').forEach(el => el.classList.remove('selected'));
+      element.classList.add('selected');
+      bookingData.part = { name, basePrice: price };
+    }
+
+    // ========== INVOICE ==========
+    function generateInvoice() {
+      const part = bookingData.part;
+      const material = bookingData.material;
+      const tuning = bookingData.tuning;
+      if (!part || !material || !tuning) return;
+
+      const base = part.basePrice;
+      const matPremium = materialMultiplier[material] || 0;
+      const tuneSurcharge = tuningSurcharge[tuning] || 0;
+      const subtotal = base + matPremium + tuneSurcharge;
+      const tax = Math.round(subtotal * taxRate);
+      const grand = subtotal + tax;
+
+      document.getElementById('invoiceContainer').innerHTML = `
+        <table class="invoice-table">
+          <tr><td>Part</td><td>${part.name}</td><td>₹${base}</td></tr>
+          <tr><td>Material</td><td>${material.toUpperCase()}</td><td>+ ₹${matPremium}</td></tr>
+          <tr><td>Tuning</td><td>${tuning.toUpperCase()}</td><td>+ ₹${tuneSurcharge}</td></tr>
+          <tr><td colspan="2">Subtotal</td><td>₹${subtotal}</td></tr>
+          <tr><td colspan="2">Tax (18% GST)</td><td>₹${tax}</td></tr>
+          <tr class="invoice-total"><td colspan="2">Grand Total</td><td>₹${grand.toLocaleString()}</td></tr>
+        </table>
+        <p style="text-align:right;">Order total: <strong>₹${grand}</strong></p>
+      `;
+    }
+
+    function finalizeOrder() {
+      // Generate random order ID
+      const orderId = 'BT-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+      document.getElementById('orderIdDisplay').textContent = orderId;
+    }
+
+    function resetBooking() {
+      localStorage.removeItem('biketool_phase');
+      localStorage.removeItem('biketool_data');
+      location.reload();
+    }
+
+    // ========== INITIAL LOAD ==========
+    updatePhaseUI();
+  </script>
+</body>
+</html>
